@@ -1,13 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, Camera, CheckCircle, AlertCircle, Loader2, Navigation } from 'lucide-react';
 import Webcam from 'react-webcam';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
-import { getAttendanceByDate, checkIn, checkOut, getWorkLocations, getShifts } from '@/lib/firebase/firestore';
-import { getEmployee } from '@/lib/firebase/firestore';
+import { getAttendanceByDate, checkIn, checkOut, getWorkLocations, getShifts, getEmployee } from '@/lib/firebase/firestore';
 import {
   getCurrentPosition, validateLocation, buildAttendanceEvent,
   calculateLateMinutes, calculateEarlyLeaveMinutes, formatWorkDuration,
@@ -66,7 +64,7 @@ export default function CheckInPage() {
       setNearestLocation(validation.nearestLocation);
       setDistance(validation.distance);
       setLocationStatus(validation.isValid ? 'valid' : 'invalid');
-    } catch (err) {
+    } catch {
       setLocationStatus('error');
       toast.error('Could not get your location. Please enable GPS.');
     }
@@ -74,85 +72,51 @@ export default function CheckInPage() {
 
   const capturePhoto = () => {
     const photo = webcamRef.current?.getScreenshot();
-    if (photo) {
-      setCapturedPhoto(photo);
-      setShowCamera(false);
-    }
+    if (photo) { setCapturedPhoto(photo); setShowCamera(false); }
   };
 
   const handleCheckIn = async () => {
     if (!user || !position || locationStatus !== 'valid') {
-      toast.error('Please verify your location first');
-      return;
+      toast.error('Please verify your location first'); return;
     }
     setLoading(true);
     try {
       const employee = await getEmployee(user.uid);
       if (!employee) throw new Error('Employee data not found');
-
       const event = await buildAttendanceEvent(position, capturedPhoto || undefined);
-      const lateMinutes = employeeShift
-        ? calculateLateMinutes(new Date(), employeeShift.startTime, employeeShift.graceMinutes)
-        : 0;
-
-      await checkIn(
-        user.uid,
-        user.displayName,
-        employee.departmentId,
-        employee.shiftId,
-        nearestLocation?.id || '',
-        event,
-        lateMinutes
-      );
-
+      const lateMinutes = employeeShift ? calculateLateMinutes(new Date(), employeeShift.startTime, employeeShift.graceMinutes) : 0;
+      await checkIn(user.uid, user.displayName, employee.departmentId, employee.shiftId, nearestLocation?.id || '', event, lateMinutes);
       const today = new Date().toISOString().split('T')[0];
-      const record = await getAttendanceByDate(user.uid, today);
-      setTodayRecord(record);
-
-      toast.success(lateMinutes > 0
-        ? `Checked in (${lateMinutes} min late)`
-        : 'Checked in successfully! Have a great day.');
+      setTodayRecord(await getAttendanceByDate(user.uid, today));
+      toast.success(lateMinutes > 0 ? `Checked in (${lateMinutes} min late)` : 'Checked in! Have a great day.');
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Check-in failed');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleCheckOut = async () => {
     if (!user || !todayRecord?.id || !position) {
-      toast.error('Please verify your location first');
-      return;
+      toast.error('Please verify your location first'); return;
     }
     setLoading(true);
     try {
       const event = await buildAttendanceEvent(position, undefined);
-      const earlyLeave = employeeShift
-        ? calculateEarlyLeaveMinutes(new Date(), employeeShift.endTime)
-        : 0;
-
-      const checkInTime = todayRecord.checkIn?.time
-        ? new Date(todayRecord.checkIn.time as unknown as string)
-        : new Date();
-
+      const earlyLeave = employeeShift ? calculateEarlyLeaveMinutes(new Date(), employeeShift.endTime) : 0;
+      const checkInTime = todayRecord.checkIn?.time ? new Date(todayRecord.checkIn.time as unknown as string) : new Date();
       await checkOut(todayRecord.id, event, checkInTime, earlyLeave);
-
       const today = new Date().toISOString().split('T')[0];
-      const record = await getAttendanceByDate(user.uid, today);
-      setTodayRecord(record);
-
-      toast.success('Checked out successfully! See you tomorrow.');
+      setTodayRecord(await getAttendanceByDate(user.uid, today));
+      toast.success('Checked out! See you tomorrow.');
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Check-out failed');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   if (initializing) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-blue-600" size={32} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 240 }}>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+        <div style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     );
   }
@@ -161,169 +125,165 @@ export default function CheckInPage() {
   const hasCheckedOut = !!todayRecord?.checkOut;
   const workMinutes = todayRecord?.totalWorkMinutes || 0;
 
+  const card = {
+    background: '#fff', borderRadius: 20,
+    border: '1px solid #e5e7eb', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', padding: 20,
+  };
+
+  const locColors = {
+    valid: { bg: '#ecfdf5', color: '#065f46', border: '#a7f3d0' },
+    invalid: { bg: '#fef2f2', color: '#991b1b', border: '#fca5a5' },
+    error: { bg: '#f9fafb', color: '#374151', border: '#e5e7eb' },
+  };
+
   return (
-    <div className="max-w-lg mx-auto space-y-6">
-      {/* Time Display */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-8 text-white text-center shadow-xl shadow-blue-500/20">
-        <p className="text-blue-200 text-sm font-medium uppercase tracking-widest mb-2">
+    <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Clock */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1d4ed8, #1e3a8a)',
+        borderRadius: 24, padding: '32px 24px', textAlign: 'center',
+        boxShadow: '0 12px 40px rgba(29,78,216,0.25)',
+      }}>
+        <p style={{ fontSize: 12, color: 'rgba(147,197,253,0.8)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 8px' }}>
           {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
-        <p className="text-5xl font-bold tabular-nums tracking-tight">
+        <p style={{ fontSize: 48, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em', margin: 0, fontVariantNumeric: 'tabular-nums' }}>
           {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
         </p>
         {employeeShift && (
-          <p className="text-blue-200 text-sm mt-3">
+          <p style={{ fontSize: 13, color: 'rgba(147,197,253,0.8)', marginTop: 10 }}>
             Shift: {employeeShift.name} ({employeeShift.startTime} – {employeeShift.endTime})
           </p>
         )}
-      </motion.div>
+      </div>
 
-      {/* Today Status */}
+      {/* Today's Record */}
       {hasCheckedIn && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Today's Record</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Check In</p>
-              <p className="font-bold text-green-600">
-                {new Date(todayRecord!.checkIn!.time as unknown as string).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Check Out</p>
-              <p className={`font-bold ${hasCheckedOut ? 'text-red-500' : 'text-gray-400'}`}>
-                {hasCheckedOut
-                  ? new Date(todayRecord!.checkOut!.time as unknown as string).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                  : '--:--'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Work Time</p>
-              <p className="font-bold text-blue-600">{hasCheckedOut ? formatWorkDuration(workMinutes) : 'Active'}</p>
-            </div>
+        <div style={card}>
+          <h3 style={{ fontWeight: 700, fontSize: 14, color: '#0f1e4a', margin: '0 0 16px', letterSpacing: '-0.01em' }}>Today's Record</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, textAlign: 'center' }}>
+            {[
+              { label: 'Check In', value: new Date(todayRecord!.checkIn!.time as unknown as string).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), color: '#10b981' },
+              { label: 'Check Out', value: hasCheckedOut ? new Date(todayRecord!.checkOut!.time as unknown as string).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '--:--', color: hasCheckedOut ? '#ef4444' : '#9ca3af' },
+              { label: 'Work Time', value: hasCheckedOut ? formatWorkDuration(workMinutes) : 'Active', color: '#2563eb' },
+            ].map(({ label, value, color }) => (
+              <div key={label}>
+                <p style={{ fontSize: 11, color: '#9ca3af', margin: '0 0 4px' }}>{label}</p>
+                <p style={{ fontWeight: 700, color, fontSize: 15, margin: 0 }}>{value}</p>
+              </div>
+            ))}
           </div>
           {todayRecord!.lateMinutes > 0 && (
-            <div className="mt-3 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl text-amber-600 dark:text-amber-400 text-sm text-center">
+            <div style={{ marginTop: 12, padding: '8px 14px', background: '#fef3c7', borderRadius: 12, color: '#92400e', fontSize: 13, textAlign: 'center', fontWeight: 500 }}>
               ⚠ Late by {todayRecord!.lateMinutes} minutes
             </div>
           )}
-        </motion.div>
+        </div>
       )}
 
-      {/* Location Check */}
-      <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Navigation size={18} className="text-blue-600" />
-          Location Verification
+      {/* Location */}
+      <div style={card}>
+        <h3 style={{ fontWeight: 700, fontSize: 14, color: '#0f1e4a', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8, letterSpacing: '-0.01em' }}>
+          <Navigation size={16} color="#2563eb" /> Location Verification
         </h3>
-        <button onClick={checkLocation} disabled={locationStatus === 'checking'}
-          className="w-full py-3 px-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 transition-all flex items-center justify-center gap-2 font-medium">
-          {locationStatus === 'checking' ? (
-            <><Loader2 size={18} className="animate-spin" /> Getting location...</>
-          ) : (
-            <><MapPin size={18} /> {locationStatus === 'idle' ? 'Check My Location' : 'Re-check Location'}</>
-          )}
+        <button onClick={checkLocation} disabled={locationStatus === 'checking'} style={{
+          width: '100%', padding: '12px', border: '2px dashed #e5e7eb', borderRadius: 14,
+          background: 'none', cursor: locationStatus === 'checking' ? 'not-allowed' : 'pointer',
+          color: '#6b7280', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 8, fontFamily: 'inherit', transition: 'all 0.15s',
+        }}
+          onMouseEnter={e => { if (locationStatus !== 'checking') { (e.currentTarget as HTMLElement).style.borderColor = '#2563eb'; (e.currentTarget as HTMLElement).style.color = '#2563eb'; } }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLElement).style.color = '#6b7280'; }}>
+          {locationStatus === 'checking'
+            ? <><div style={{ width: 16, height: 16, border: '2px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Getting location...</>
+            : <><MapPin size={16} /> {locationStatus === 'idle' ? 'Check My Location' : 'Re-check Location'}</>
+          }
         </button>
 
-        <AnimatePresence>
-          {locationStatus !== 'idle' && locationStatus !== 'checking' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-              className={`mt-3 p-3 rounded-xl flex items-start gap-3 ${
-                locationStatus === 'valid' ? 'bg-emerald-50 dark:bg-emerald-900/20' :
-                locationStatus === 'invalid' ? 'bg-red-50 dark:bg-red-900/20' :
-                'bg-gray-50 dark:bg-gray-800'
-              }`}>
-              {locationStatus === 'valid' ? (
-                <CheckCircle size={18} className="text-emerald-600 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertCircle size={18} className="text-red-600 mt-0.5 flex-shrink-0" />
-              )}
+        {locationStatus !== 'idle' && locationStatus !== 'checking' && (() => {
+          const c = locColors[locationStatus as keyof typeof locColors] || locColors.error;
+          return (
+            <div style={{ marginTop: 12, padding: '12px 14px', background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              {locationStatus === 'valid'
+                ? <CheckCircle size={17} color="#10b981" style={{ flexShrink: 0, marginTop: 1 }} />
+                : <AlertCircle size={17} color="#ef4444" style={{ flexShrink: 0, marginTop: 1 }} />
+              }
               <div>
-                <p className={`text-sm font-medium ${locationStatus === 'valid' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: c.color, margin: 0 }}>
                   {locationStatus === 'valid' ? 'Location verified!' : 'Outside work area'}
                 </p>
                 {nearestLocation && (
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                     {nearestLocation.name} — {distance}m away
                     {locationStatus === 'invalid' && ` (max: ${nearestLocation.radius}m)`}
                   </p>
                 )}
-                {locationStatus === 'error' && (
-                  <p className="text-xs text-gray-500 mt-0.5">Enable GPS and try again</p>
-                )}
+                {locationStatus === 'error' && <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>Enable GPS and try again</p>}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Selfie Camera */}
-      <div className="bg-card rounded-2xl border border-border/50 p-5 shadow-sm">
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Camera size={18} className="text-blue-600" />
-          Selfie Verification <span className="text-xs text-gray-400 font-normal">(Optional)</span>
+      {/* Camera */}
+      <div style={card}>
+        <h3 style={{ fontWeight: 700, fontSize: 14, color: '#0f1e4a', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Camera size={16} color="#2563eb" /> Selfie Verification
+          <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>(Optional)</span>
         </h3>
         {capturedPhoto ? (
-          <div className="relative">
-            <img src={capturedPhoto} alt="Selfie" className="w-full h-40 object-cover rounded-xl" />
-            <button onClick={() => setCapturedPhoto(null)}
-              className="absolute top-2 right-2 px-3 py-1 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 transition-colors">
+          <div style={{ position: 'relative' }}>
+            <img src={capturedPhoto} alt="Selfie" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 12 }} />
+            <button onClick={() => setCapturedPhoto(null)} style={{ position: 'absolute', top: 8, right: 8, padding: '4px 10px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               Retake
             </button>
           </div>
         ) : showCamera ? (
-          <div className="relative">
-            <Webcam ref={webcamRef} screenshotFormat="image/jpeg" className="w-full h-48 object-cover rounded-xl" />
-            <button onClick={capturePhoto}
-              className="absolute bottom-3 left-1/2 -translate-x-1/2 px-6 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors">
+          <div style={{ position: 'relative' }}>
+            <Webcam ref={webcamRef} screenshotFormat="image/jpeg" style={{ width: '100%', height: 192, objectFit: 'cover', borderRadius: 12 }} />
+            <button onClick={capturePhoto} style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', padding: '8px 24px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
               Capture
             </button>
           </div>
         ) : (
-          <button onClick={() => setShowCamera(true)}
-            className="w-full py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-all flex items-center justify-center gap-2 text-sm">
-            <Camera size={16} /> Open Camera
+          <button onClick={() => setShowCamera(true)} style={{ width: '100%', padding: 12, border: '2px dashed #e5e7eb', borderRadius: 14, background: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'inherit' }}>
+            <Camera size={15} /> Open Camera
           </button>
         )}
       </div>
 
-      {/* Check In / Check Out Button */}
+      {/* CTA Button */}
       {!hasCheckedOut && (
-        <motion.button
-          whileTap={{ scale: 0.97 }}
+        <button
           onClick={hasCheckedIn ? handleCheckOut : handleCheckIn}
           disabled={loading || locationStatus !== 'valid'}
-          className={`w-full py-4 rounded-2xl font-bold text-white text-lg shadow-lg transition-all ${
-            hasCheckedIn
-              ? 'bg-gradient-to-r from-red-500 to-red-600 shadow-red-500/30 hover:from-red-600 hover:to-red-700 disabled:from-red-300 disabled:to-red-400'
-              : 'bg-gradient-to-r from-blue-600 to-blue-700 shadow-blue-500/30 hover:from-blue-700 hover:to-blue-800 disabled:from-blue-300 disabled:to-blue-400'
-          }`}>
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 size={20} className="animate-spin" />
-              Processing...
-            </span>
-          ) : hasCheckedIn ? (
-            <span className="flex items-center justify-center gap-2">
-              <Clock size={20} />
-              Check Out
-            </span>
-          ) : (
-            <span className="flex items-center justify-center gap-2">
-              <CheckCircle size={20} />
-              Check In
-            </span>
-          )}
-        </motion.button>
+          style={{
+            width: '100%', padding: '16px', borderRadius: 20, fontWeight: 800,
+            color: '#fff', fontSize: 17, border: 'none', cursor: loading || locationStatus !== 'valid' ? 'not-allowed' : 'pointer',
+            background: hasCheckedIn
+              ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+              : 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+            boxShadow: hasCheckedIn ? '0 8px 24px rgba(239,68,68,0.3)' : '0 8px 24px rgba(37,99,235,0.3)',
+            opacity: loading || locationStatus !== 'valid' ? 0.6 : 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            fontFamily: 'inherit', transition: 'opacity 0.15s',
+          }}>
+          {loading
+            ? <><div style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Processing...</>
+            : hasCheckedIn
+            ? <><Clock size={20} /> Check Out</>
+            : <><CheckCircle size={20} /> Check In</>
+          }
+        </button>
       )}
 
       {hasCheckedOut && (
-        <div className="text-center py-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl">
-          <CheckCircle size={36} className="text-emerald-600 mx-auto mb-2" />
-          <p className="font-bold text-emerald-700 dark:text-emerald-400">Day Complete!</p>
-          <p className="text-sm text-gray-500 mt-1">Total work time: {formatWorkDuration(workMinutes)}</p>
+        <div style={{ textAlign: 'center', padding: '32px 24px', background: '#ecfdf5', borderRadius: 20, border: '1px solid #a7f3d0' }}>
+          <CheckCircle size={38} color="#10b981" style={{ margin: '0 auto 10px', display: 'block' }} />
+          <p style={{ fontWeight: 800, color: '#065f46', fontSize: 16, margin: '0 0 6px' }}>Day Complete!</p>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Total work time: {formatWorkDuration(workMinutes)}</p>
         </div>
       )}
     </div>
