@@ -3,12 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { Eye, EyeOff, KeyRound, User, Mail, Phone, Lock, Loader2, Building2 } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, User, Mail, Phone, Lock, Loader2, ArrowRight } from 'lucide-react';
 import { registerEmployee, validateActivationCode } from '@/lib/firebase/auth';
 
 const registerSchema = z.object({
@@ -23,6 +22,19 @@ const registerSchema = z.object({
   path: ['confirmPassword'],
 });
 type RegisterForm = z.infer<typeof registerSchema>;
+
+const inputStyle = {
+  width: '100%', padding: '11px 14px 11px 42px',
+  border: '1.5px solid #e5e7eb', borderRadius: 12,
+  background: '#f9fafb', fontSize: 14, color: '#111827',
+  fontFamily: 'inherit', outline: 'none',
+  boxSizing: 'border-box' as const,
+};
+
+const labelStyle = {
+  display: 'block', fontSize: 12.5, fontWeight: 600,
+  color: '#374151', marginBottom: 6, letterSpacing: '0.01em',
+};
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,13 +62,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      const result = await registerEmployee(
-        data.activationCode,
-        data.email,
-        data.password,
-        data.displayName,
-        data.phoneNumber
-      );
+      const result = await registerEmployee(data.activationCode, data.email, data.password, data.displayName, data.phoneNumber);
       if (result.success) {
         toast.success('Account created! Redirecting...');
         setTimeout(() => router.push('/auth/login'), 1500);
@@ -71,120 +77,131 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-950 dark:to-gray-900">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
-            <Building2 className="w-8 h-8 text-white" />
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%)', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .input-focus:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+      `}</style>
+
+      <div style={{ width: '100%', maxWidth: 500 }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #1d4ed8, #2563eb)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 24px rgba(37,99,235,0.3)' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+              <line x1="12" y1="12" x2="12" y2="16" /><line x1="10" y1="14" x2="14" y2="14" />
+            </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Create Account</h1>
-          <p className="text-gray-500 mt-2">Register using your activation code from HR</p>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f1e4a', letterSpacing: '-0.03em', margin: '0 0 8px' }}>Create Account</h1>
+          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>Register using your activation code from HR</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-8 border border-gray-100 dark:border-gray-800">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {/* Form Card */}
+        <div style={{ background: '#fff', borderRadius: 24, padding: 32, boxShadow: '0 8px 40px rgba(0,0,0,0.1)', border: '1px solid #e5e7eb' }}>
+          <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+
             {/* Activation Code */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Activation Code <span className="text-red-500">*</span>
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    {...register('activationCode')}
-                    placeholder="XXXX-XXXX"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white uppercase tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  />
+              <label style={labelStyle}>Activation Code <span style={{ color: '#ef4444' }}>*</span></label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <KeyRound size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                  <input {...register('activationCode')} placeholder="XXXX-XXXX" className="input-focus"
+                    style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
                 </div>
-                <button type="button" onClick={checkCode} disabled={checkingCode}
-                  className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm whitespace-nowrap">
+                <button type="button" onClick={checkCode} disabled={checkingCode} style={{
+                  padding: '11px 16px', background: '#2563eb', color: '#fff', border: 'none',
+                  borderRadius: 12, fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                }}>
                   {checkingCode ? '...' : 'Verify'}
                 </button>
               </div>
-              {codeValid === true && (
-                <p className="text-emerald-600 text-xs mt-1 flex items-center gap-1">✓ Code verified successfully</p>
-              )}
-              {codeValid === false && (
-                <p className="text-red-500 text-xs mt-1">Invalid or expired activation code</p>
-              )}
-              {errors.activationCode && <p className="text-red-500 text-xs mt-1">{errors.activationCode.message}</p>}
+              {codeValid === true && <p style={{ fontSize: 12, color: '#10b981', marginTop: 5, fontWeight: 500 }}>✓ Code verified successfully</p>}
+              {codeValid === false && <p style={{ fontSize: 12, color: '#ef4444', marginTop: 5 }}>Invalid or expired activation code</p>}
+              {errors.activationCode && <p style={{ fontSize: 12, color: '#ef4444', marginTop: 5 }}>{errors.activationCode.message}</p>}
             </div>
 
             {/* Full Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input {...register('displayName')} placeholder="John Doe"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+              <label style={labelStyle}>Full Name</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                <input {...register('displayName')} placeholder="John Doe" className="input-focus" style={inputStyle} />
               </div>
-              {errors.displayName && <p className="text-red-500 text-xs mt-1">{errors.displayName.message}</p>}
+              {errors.displayName && <p style={{ fontSize: 12, color: '#ef4444', marginTop: 5 }}>{errors.displayName.message}</p>}
             </div>
 
-            {/* Email & Phone in 2 columns */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Email & Phone */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input {...register('email')} type="email" placeholder="you@company.com"
-                    className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                <label style={labelStyle}>Email</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                  <input {...register('email')} type="email" placeholder="you@company.com" className="input-focus"
+                    style={{ ...inputStyle, fontSize: 13, padding: '11px 12px 11px 36px' }} />
                 </div>
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                {errors.email && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.email.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Phone</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input {...register('phoneNumber')} placeholder="+1 234 567 890"
-                    className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                <label style={labelStyle}>Phone</label>
+                <div style={{ position: 'relative' }}>
+                  <Phone size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                  <input {...register('phoneNumber')} placeholder="+1 234 567" className="input-focus"
+                    style={{ ...inputStyle, fontSize: 13, padding: '11px 12px 11px 36px' }} />
                 </div>
-                {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber.message}</p>}
+                {errors.phoneNumber && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.phoneNumber.message}</p>}
               </div>
             </div>
 
-            {/* Password */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Passwords */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input {...register('password')} type={showPassword ? 'text' : 'password'} placeholder="••••••••"
-                    className="w-full pl-9 pr-9 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                <label style={labelStyle}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                  <input {...register('password')} type={showPassword ? 'text' : 'password'} placeholder="••••••••" className="input-focus"
+                    style={{ ...inputStyle, fontSize: 13, padding: '11px 36px 11px 36px' }} />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', padding: 2 }}>
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                {errors.password && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.password.message}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                  <input {...register('confirmPassword')} type="password" placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                <label style={labelStyle}>Confirm</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                  <input {...register('confirmPassword')} type="password" placeholder="••••••••" className="input-focus"
+                    style={{ ...inputStyle, fontSize: 13, padding: '11px 12px 11px 36px' }} />
                 </div>
-                {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
+                {errors.confirmPassword && <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{errors.confirmPassword.message}</p>}
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading}
-              className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 mt-2">
-              {isLoading ? <><Loader2 size={18} className="animate-spin" /> Creating account...</> : 'Create Account'}
+            {/* Submit */}
+            <button type="submit" disabled={isLoading} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '14px', marginTop: 4,
+              background: 'linear-gradient(135deg, #1d4ed8, #2563eb)',
+              color: '#fff', border: 'none', borderRadius: 14,
+              fontWeight: 700, fontSize: 15, cursor: isLoading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 16px rgba(37,99,235,0.35)', opacity: isLoading ? 0.7 : 1,
+              fontFamily: 'inherit', transition: 'opacity 0.15s',
+            }}>
+              {isLoading
+                ? <><div style={{ width: 17, height: 17, border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Creating account...</>
+                : <>Create Account <ArrowRight size={16} /></>
+              }
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 text-center">
-            <p className="text-sm text-gray-500">
-              Already have an account?{' '}
-              <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-semibold">Sign in</Link>
-            </p>
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #f0f0f0', textAlign: 'center', fontSize: 13.5, color: '#6b7280' }}>
+            Already have an account?{' '}
+            <Link href="/auth/login" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
