@@ -3,9 +3,8 @@
 // Handles geofencing, GPS validation, check-in/out logic
 // ============================================================
 
-import { WorkLocation, AttendanceEvent, DeviceInfo } from '../types';
+import { WorkLocation, AttendanceEvent, DeviceInfo } from '../types/index';
 import { getDeviceFingerprint, getDeviceInfo } from '../firebase/auth';
-
 // ─── Geolocation ──────────────────────────────────────────────
 export interface GeoPosition {
   latitude: number;
