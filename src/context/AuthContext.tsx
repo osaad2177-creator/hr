@@ -1,9 +1,7 @@
 'use client';
-
 // ============================================================
 // Auth Context - Global authentication state
 // ============================================================
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { subscribeToAuthChanges } from '@/lib/firebase/auth';
@@ -46,8 +44,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = subscribeToAuthChanges(async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        const userData = await getUserById(fbUser.uid);
-        setUser(userData);
+        try {
+          const userData = await getUserById(fbUser.uid);
+          setUser(userData);
+        } catch {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
