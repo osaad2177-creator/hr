@@ -26,7 +26,7 @@ import {
 } from 'firebase/firestore';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import { auth, db } from './config';
-import { User, ActivationCode, UserRole } from '../types/index';
+import { User, ActivationCode, UserRole } from '../../types/index'
 import { logAuditEvent } from './firestore';
 
 // ─── Device Fingerprinting ────────────────────────────────────
