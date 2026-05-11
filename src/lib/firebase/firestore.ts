@@ -32,7 +32,7 @@ import {
   Department, WorkLocation, Shift, Notification, Announcement,
   Holiday, SystemSettings, AuditLog, DashboardStats,
   AttendanceFilter, EmployeeFilter, UserRole,
-} from '../../types/index'
+} from '@/lib/types/index'
 
 // ─── Helpers ──────────────────────────────────────────────────
 function toDate(value: unknown): Date {
