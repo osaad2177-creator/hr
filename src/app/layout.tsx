@@ -13,16 +13,6 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: 'HR Attendance System',
   description: 'Enterprise HR Attendance & Leave Management System',
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'HR System',
-  },
-  icons: {
-    icon: '/icons/icon-192x192.png',
-    apple: '/icons/icon-192x192.png',
-  },
 };
 
 export const viewport: Viewport = {
