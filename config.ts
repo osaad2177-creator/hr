@@ -17,13 +17,13 @@ import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
 import { getMessaging, isSupported } from 'firebase/messaging';
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyD8ZQc9X0369LSP_OhFI6rSkm_Z7c3Il-I",
+  authDomain: "my-hr-92b9c.firebaseapp.com",
+  projectId: "my-hr-92b9c",
+  storageBucket: "my-hr-92b9c.firebasestorage.app",
+  messagingSenderId: "112741774097",
+  appId: "1:112741774097:web:d37189773a1036830312b0",
+  measurementId: "G-LLT85TYM0K"
 };
 
 // Initialize Firebase (singleton pattern)
