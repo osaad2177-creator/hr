@@ -8,7 +8,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User as FirebaseUser } from 'firebase/auth';
 import { subscribeToAuthChanges } from '@/lib/firebase/auth';
 import { getUserById } from '@/lib/firebase/firestore';
-import { User } from '@/lib/types';
+import { User } from '@/lib/types/index';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
