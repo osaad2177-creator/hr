@@ -1,12 +1,6 @@
-// ============================================================
-// Attendance Service
-// Handles geofencing, GPS validation, check-in/out logic
-// ============================================================
+import { WorkLocation, AttendanceEvent, DeviceInfo } from '@/lib/types/index';
+import { getDeviceFingerprint, getDeviceInfo } from '@/lib/firebase/auth';
 
-import { WorkLocation, AttendanceEvent, DeviceInfo } from '../types';
-import { getDeviceFingerprint, getDeviceInfo } from '../firebase/auth';
-
-// ─── Geolocation ──────────────────────────────────────────────
 export interface GeoPosition {
   latitude: number;
   longitude: number;
@@ -31,12 +25,11 @@ export async function getCurrentPosition(): Promise<GeoPosition> {
   });
 }
 
-// ─── Distance Calculation (Haversine formula) ─────────────────
 export function calculateDistance(
   lat1: number, lon1: number,
   lat2: number, lon2: number
 ): number {
-  const R = 6371000; // Earth radius in meters
+  const R = 6371000;
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -46,14 +39,12 @@ export function calculateDistance(
   return R * c;
 }
 
-// ─── Validate Location Against Work Locations ─────────────────
 export function validateLocation(
   position: GeoPosition,
   workLocations: WorkLocation[]
 ): { isValid: boolean; nearestLocation: WorkLocation | null; distance: number } {
   let nearestLocation: WorkLocation | null = null;
   let minDistance = Infinity;
-
   for (const loc of workLocations) {
     const distance = calculateDistance(
       position.latitude, position.longitude,
@@ -64,21 +55,16 @@ export function validateLocation(
       nearestLocation = loc;
     }
   }
-
   const isValid = nearestLocation ? minDistance <= nearestLocation.radius : false;
   return { isValid, nearestLocation, distance: Math.round(minDistance) };
 }
 
-// ─── Fake GPS Detection (basic heuristics) ────────────────────
 export function detectFakeGPS(position: GeoPosition): boolean {
-  // Very low accuracy might indicate mock location
   if (position.accuracy > 2000) return true;
-  // Suspiciously perfect coordinates (exactly 0.0 etc)
   if (position.latitude === 0 && position.longitude === 0) return true;
   return false;
 }
 
-// ─── Get IP Address ───────────────────────────────────────────
 export async function getClientIP(): Promise<string> {
   try {
     const res = await fetch('https://api.ipify.org?format=json');
@@ -89,7 +75,6 @@ export async function getClientIP(): Promise<string> {
   }
 }
 
-// ─── Reverse Geocoding ────────────────────────────────────────
 export async function reverseGeocode(lat: number, lon: number): Promise<string> {
   try {
     const res = await fetch(
@@ -102,7 +87,6 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string> 
   }
 }
 
-// ─── Build Attendance Event ───────────────────────────────────
 export async function buildAttendanceEvent(
   position: GeoPosition,
   photoURL?: string
@@ -112,14 +96,11 @@ export async function buildAttendanceEvent(
     getClientIP(),
     reverseGeocode(position.latitude, position.longitude),
   ]);
-
   const deviceInfo: DeviceInfo = {
     ...getDeviceInfo(),
     fingerprint,
   };
-
   const isFake = detectFakeGPS(position);
-
   return {
     time: new Date(),
     latitude: position.latitude,
@@ -135,35 +116,30 @@ export async function buildAttendanceEvent(
   };
 }
 
-// ─── Calculate Late Minutes ───────────────────────────────────
 export function calculateLateMinutes(
   checkInTime: Date,
-  shiftStartTime: string, // "09:00"
+  shiftStartTime: string,
   graceMinutes: number
 ): number {
   const [hours, minutes] = shiftStartTime.split(':').map(Number);
   const shiftStart = new Date(checkInTime);
   shiftStart.setHours(hours, minutes, 0, 0);
   const graceEnd = new Date(shiftStart.getTime() + graceMinutes * 60000);
-
   if (checkInTime <= graceEnd) return 0;
   return Math.floor((checkInTime.getTime() - shiftStart.getTime()) / 60000);
 }
 
-// ─── Calculate Early Leave Minutes ───────────────────────────
 export function calculateEarlyLeaveMinutes(
   checkOutTime: Date,
-  shiftEndTime: string, // "17:00"
+  shiftEndTime: string,
 ): number {
   const [hours, minutes] = shiftEndTime.split(':').map(Number);
   const shiftEnd = new Date(checkOutTime);
   shiftEnd.setHours(hours, minutes, 0, 0);
-
   if (checkOutTime >= shiftEnd) return 0;
   return Math.floor((shiftEnd.getTime() - checkOutTime.getTime()) / 60000);
 }
 
-// ─── Format Duration ──────────────────────────────────────────
 export function formatWorkDuration(minutes: number): string {
   if (minutes <= 0) return '-';
   const h = Math.floor(minutes / 60);
