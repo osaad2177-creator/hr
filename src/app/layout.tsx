@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { DM_Sans } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
-import '@/styles/globals.css';
+import './globals.css';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
