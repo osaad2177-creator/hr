@@ -52,7 +52,7 @@ export default function AttendancePage() {
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0f1e4a', margin: 0, letterSpacing: '-0.03em' }}>Attendance</h1>
           <p style={{ fontSize: 13, color: '#9ca3af', marginTop: 4 }}>{records.length} records found</p>
         </div>
-        <button onClick={load} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button onClick={() => load()} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
           <RefreshCcw size={14} /> Refresh
         </button>
       </div>
